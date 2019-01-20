@@ -43,5 +43,311 @@
 		<p>作为其上下文的一部分，每个进程都有一个当前工作目录(current working directory)来确定其在目录层次结构中的当前位置。你可以用cd命令来修改shell中的当前工作目录。</p>
 		</div>
 		<h2>10.3 打开和关闭文件</h2>
+		<div>
+			<p>
+				进程是通过调用。pen函数来打开一个已存在的文件或者创建一个新文件的:
+			</p>
+			<pre>
+			#include <sys/types.h>
+			#include <sys/stat.h>
+			#include <fcntl.h>
+			int open(char *filename，int flags，mode t mode);
+            &nbsp;&nbsp;          返回:若成功则为新文件描述符，若出错为-1.
+			</pre>
+			<p>
+				open函数将filename转换为一个文件描述符，并且返回描述符数字。返回的描述符总是在进程中当前没有打开的最小描述符。flags参数指明了进程打算如何访问这个文件:
+			</p>
+			<div>
+				<li>O_RDONLY:只读。</li>
+				<li>O_WRONLY:只写。</li>
+				<li>O_RDWR:可读可写。</li>
+				<pre>
+					例如，下面的代码说明如何以读的方式打开一个已存在的文件:
+					fd=Open("foo.txt"，0_RDONLY, 0);
+				</pre>
+				flags参数也可以是一个或者更多位掩码的或，为写提供给一些额外的指示:
+				<li>O_ CREAT:如果文件不存在，就创建它的一个截断的(truncated)(空)文件。</li>
+				<li>O_ TRUNC:如果文件已经存在，就截断它。</li>
+				<li>O_ APPEND:在每次写操作前，设置文件位置到文件的结尾处。</li>
+				<pre>
+					例如，下面的代码说明的是如何打开一个已存在文件，并在后面添加一些数据:
+					fd=Open("foo.txt"，0 WRONLYIO_APPEND, 0);
+				</pre>
+				mode参数指定了新文件的访问权限位。这些位的符号名字如下面表格所示。作为上下文的一部分，每个进程都有一个umask，它是通过调用umask函数来设置的。当
+				进程通过带某个mode参数的。pen函数调用来创建一个新文件时，文件的访问权限位被设置为mode&~umask。例如，假设我们给定下面的mode和umask默认值:
+				<pre>
+					#define DEF_MODE    S_IRUSRIS_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH
+					#define DEF_UMASK   S_IWGRP|S_IWOTH
+				</pre>
+				<pre>
+					接下来，下面的代码片段创建一个新文件，文件的拥有者有读写权限，而所有其他的用户都有读权限:
+					umask(DEF UMASK);
+					fd=Open("foo .txt"，0_CREATIO TRUNCIO WR,ONLY, DEF_MODE);
+				</pre>
+	<table>
+		<tr>
+			<th>掩码</th>
+			<th>描述</th>
+		</tr>
+		<tr>
+			<td>S_TRTISR</td>
+			<td>使用者(拥有者)能够读这个文件</td>
+		</tr>
+		<tr>
+			<td>S_IWUSR</td>
+			<td>使用者(拥有者)能够写这个文件</td>
+		</tr>
+		<tr>
+			<td>S_IXUSR</td>
+			<td>使用者(拥有者)能够执行这个文件</td>
+		</tr>
+		<tr>
+			<td>S_IRGRP</td>
+			<td>拥有者所在组的成员能够读这个文件</td>
+		</tr>
+		<tr>
+			<td>S_IWGRP</td>
+			<td>拥有者所在组的成员能够写这个文件</td>
+		</tr>
+		<tr>
+			<td>S_IXGRP</td>
+			<td>拥有者所在组的成员能够执行这个文件</td>
+		</tr>
+		<tr>
+			<td>S_IROTH</td>
+			<td>其他人(任何人)能够读这个文件</td>
+		</tr>
+		<tr>
+			<td>S_IWOTH</td>
+			<td>其他人(任何人)能够写这个文件</td>
+		</tr>
+		<tr>
+			<td>S_IXOTH</td>
+			<td>其他人(任何人)能够执行这个文件</td>
+		</tr>
+		<tr>
+			<th>图10-2访问权限位。在sys/sta七.h中定义</th>
+		</tr>
+	</table>
+	<pre>
+		最后，进程通过调用close函数关闭一个打开的文件。
+		#include <unistd.h>
+		int close(int fd)
+		返回:若成功则为0，若出错则为-1,关闭一个已关闭的描述符会出错。
+	</pre>
+	</div>
+	</div>
+	<h2>10.4 读和写文件</h2>
+	<div>
+		<pre>
+			应用程序是通过分别调用read和write函数来执行输人和输出的。
+			#include <unistd.h>
+			ssize t read(int fd, void *buf, size t n);
+			返回:若成功则为读的字节数，若EOF则为0，若出错为-1.
+			ssize_t write(int fd, const void  *buf，size_t n);
+			返回:若成功则为写的字节数，若出错则为-1.
+		</pre>	
+		read函数从描述符为fd的当前文件位置复制最多n个字节到内存位置buf。返回值-1表示一个错误，而返回值0表示EOF。否则，返回值表示的是实际传送的字节数量。<br>
+		write函数从内存位置buf复制至多二个字节到描述符fd的当前文件位置。下面代码展示了一个程序使用read和write调用一次一个字节地从标准输人复制到标准输出。
+		<pre>
+		——————————————————————————————————————————————————————————code/io/pstdin.c
+		1   #include "csapp.h"
+		2
+		3   int main(void)
+		4   {
+		5   	char c;
+		6
+		7       while(Read(STDIN_FILENO,&c,1)!=0)
+		8           Write(STDOUT_FILENO,&c,1);
+		9       exit(0);
+		10  }
+		——————————————————————————————————————————————————————————code/io/pstdin.c
+			        图10-3 一次一个字节地从标准输入复制到标准输出
+		</pre>
+    通过调用lseek函数，应用程序能够显示地修改当前文件的位置。<br>
+    在某些情况下，read和write传送的字节比应用程序要求的要少。这些不足值(short count)不表示有错误。出现这样情况的原因有:
+    <li>读时遇到EOF。假设我们准备读一个文件，该文件从当前文件位置开始只含有20多个字节，而我们以50个字节的片进行读取。这样一来，下一个read返回的不足值为20，此后
+	的read将通过返回不足值。来发出EOF信号。</li>
+    <li>从终端读文本行。如果打开文件是与终端相关联的(如键盘和显示器)，那么每个read函数将一次传送一个文本行，返回的不足值等于文本行的大小。</li>
+    <li>读和写网络套接字(socket)。如果打开的文件对应于网络套接字，那么内部缓冲约束和较长的网络延迟会引起read和write返回不足值。对Linux管道(pipe)调用read和write时，
+	也有可能出现不足值。</li>
+	
+    实际上，除了EOF，当你在读磁盘文件时，将不会遇到不足值，而且在写磁盘文件时，也不会遇到不足值。然而，如果你想创建健壮的(可靠的)诸如Web服务器这样的网络应用，就
+	必须通过反复调用read和write处理不足值，直到所有需要的字节都传送完毕。
+	</div>
+	<h2>10.6 读取文件元数据</h2>
+	<div>
+	应用程序能够通过调用stat和fstat函数，检索到关于文件的信息(有时也称为文件的元数据(metadata)) 。
+	<pre>
+		#include <unistd.h>
+		#include <sys/stat.h>
+		int stat(const char *filename, struct stat *buf)
+		int fstat(int fd. struct stat *buf );
+		返回:若成功则为0，若出错则为-1。
+	</pre>
+    stat函数以一个文件名作为输人，并填写如图10-9所示的一个stat数据结构中的各个成员。fstat函数是相似的，只不过是以文件描述符而不是文件名作为输人。<br>
+	<pre>
+	——————————————————————————————————————————————————————————statbuf.h (included by sys/stat.h)
+	/*Metadata returned by the stat and fstat functions*/
+	struct stat{
+		dev_t       st_dev;        /*Device*/
+		ino_t       st_ino;        /*inode*/
+		mode_t      st_mode;       /*Protection and file type*/
+        nlink_t     st_plink;      /*Number of hard links*/
+		uid_t       st_nid;        /*User ID of owner*/
+		gid_t       st_gid;        /*Group ID of owner*/
+		dev_t       st_rdev;       /*Device type (if inode device)*/
+		off_t       st_size;       /*Total size in bytes*/
+		unsigned long st_blksize;  /*Block size for filesystem I/0*/
+		unsigned long st_blocks;   /*Number of blocks allocated*/
+		time_t      st_atime;      /*Time of last access*/
+		time_t      st_mtime;      /*Time of last modification*/
+		time_t      st_ctime;      /*Time of last change*/
+	}
+	——————————————————————————————————————————————————————————statbuf.h (included by sys/stat.h)
+	                      10-9 stat数据结构
+	</pre>
+    st_size成员包含了文件的字节数大小。stmode成员则编码了文件访问许可位(图10-2)和文件类型。Linux在sys/stat.h中定义了宏谓词来确定st_mode成员的文件类型:<br>
+    S_ISREG(m)。这是一个普通文件吗?<br>
+    S_ISDIR(m)。这是一个目录文件吗?<br>
+    S_ISSOCK(m)。这是一个网络套接字吗?<br>
+    图10-10展示了我们会如何使用这些宏和stat函数来读取和解释一个文件的stmode位。
+	<pre>
+———————————————————————————————————————————————————————————————code/io/statcheck.c
+1	#include "csapp.h"
+2	int main (int argc,char **argv)
+3	{
+4
+5		struct stat stat;
+6		char *type, *readok;
+7
+8       Stat(argv[1],&stat);
+9       if (S_ISREG(stat.st_mode))    /*Determine file type*/
+10          type="regular";
+11      else if (S_ISDIR(stat.st_mode))
+12          type="directory";
+13      else
+14          type="other";
+15      if((stat.st_mode & S_IRUSR)) /*Check read access*/
+16          readok="yes";
+17      else
+18          readok="no";
+19
+20      printf("type:%s, read: %s\n"，type, readok);
+21      exit (0);
+22  }
+———————————————————————————————————————————————————————————————code/io/statcheck.c
+                图10-10 查询和处理一个文件的st_mode位
+	</pre>
+	</div>
+	<h2>10.7 读取目录内容</h2>
+	<div>
+		<pre>
+			应用程序可以用readdir系列函数来读取目录的内容。
+			#include <sys/types.h>
+			#include <dirent.h>
+			DIR *opendir(const char *name)
+			返回:若成功，则为处理的指针;若出错，则为NULL。
+		</pre>
+		<pre>
+			函数。pendir以路径名为参数，返回指向目录流(directory stream)的指针。流是对条目有序列表的抽象，在这里是指目录项的列表。
+			#include <dirent.h>
+			struct dirent *readdir(DIR *dirp);
+                      返回:若成功，则为指向下一个目录项的指针;若没有更多的目录项或出错，则为NULL。
+		</pre>
+		每次对readdir的调用返回的都是指向流dirp中下一个目录项的指针，或者，如果没有更多目录项则返回NULL。每个目录项都是一个结构，其形式如下:<br>
+		<pre>
+		struct dirent{
+			ino_t d_ino;        /*inode number*/
+			char  d_name[256];  /*Filename*/
+		};
+		</pre>
+		虽然有些Linux版本包含了其他的结构成员，但是只有这两个对所有系统来说都是标准的。成员d_name是文件名，d_ino是文件位置。
+		如果出错，则readdir返回NULL，并设置errno。可惜的是，唯一能区分错误和流结束情况的方法是检查自调用readdir以来errno是否被修改过。
+		<pre>
+			#include <dirent.h>
+			int closedir(DIR *dirp)
+			返回:成功为0;错误为-1,
+		</pre>
+		函数closedir关闭流并释放其所有的资源。图10-11展示了怎样用readdir来读取目录的内容。
+		<pre>
+———————————————————————————————————————————————————————————————cndelinlreaddir.c
+    #include "csapp.h"
+	int main(int argc，char **argv)
+	{
+		DIR *streamp;
+		struct dirent *dep;
+		streamp=Opendir(argv[1])
+		errno = 0;
+		while((dep=readdir(streamp))!=NULL){
+			printf("Found file:%s\n"，dep->d_name)
+		}
+		if (errno!=0)
+		    unix_error("readdir error")
+		Closedir(streamp);
+		exit (0);
+	}                                                                                          门..，..，..，..41 fl弓we，.1飞11
+———————————————————————————————————————————————————————————————codeliolreaddir. c
+                图10-11 读取目录的内容
+	</pre>
+	</div>
+	<h2>10.8 共享文件</h2>
+	<div>
+	可以用许多不同的方式来共享Linux文件。除非你很清楚内核是如何表示打开的文件，否则文件共享的概念相当难懂。内核用三个相关的数据结构来表示打开的文件:
+    <li>描述符表(descriptor table)。每个进程都有它独立的描述符表，它的表项是由进程打开的文件描述符来索引的。每个打开的描述符表项指向文件表中的一个表项。</li>
+    <li>文件表((file table)。打开文件的集合是由一张文件表来表示的，所有的进程共享这张表。每个文件表的表项组成(针对我们的目的)包括当前的文件位置、引用计数
+	(reference count)(即当前指向该表项的描述符表项数)，以及一个指向v-node表中对应表项的指针。关闭一个描述符会减少相应的文件表表项中的引用计数。内核不会删除这
+	个文件表表项，直到它的引用计数为零。</li>
+    <li>v-node表(v-node table)。同文件表一样，所有的进程共享这张v-node表。每个表项包含stat结构中的大多数信息，包括stmode和stsize成员。</li>
+    图10-12展示了一个示例，其中描述符1和4通过不同的打开文件表表项来引用两个不同的文件。这是一种典型的情况，没有共享文件，并且每个描述符对应一个不同的文件.<br>
+	<img src="./res/img_10_12.png" />
+    如图10-13所示，多个描述符也可以通过不同的文件表表项来引用同一个文件。例如，如果以同一个filename调用。pen函数两次，就会发生这种情况。关键思想是每个描述符都
+	有它自己的文件位置，所以对不同描述符的读操作可以从文件的不同位置获取数据。
+	<img src="./res/img_10_13.png" />
+    我们也能理解父子进程是如何共享文件的。假设在调用fork之前，父进程有如图10-12所示的打开文件。然后，图10-14展示了调用fork后的情况。子进程有一个父进程描述符表
+	的副本。父子进程共享相同的打开文件表集合，因此共享相同的文件位置。一个很重要的结果就是，在内核删除相应文件表表项之前，父子进程必须都关闭了它们的描述符。
+	<img src="./res/img_10_14.png" />
+	</div>
+	<h2>10.9 I/O重定向</h2>
+	<div>
+	Linux shell提供了I/O重定向操作符，允许用户将磁盘文件和标准输人输出联系起来。例如，键人<br>
+	linux> ls>foo.txt<br>
+	使得shell加载和执行is程序，将标准输出重定向到磁盘文件foo.txt。就如我们将在11.5节中看到的那样，当一个Web服务器代表客户端运行CGI程序时，它就执行一种相似类型
+	的重定向。那么I/O重定向是如何工作的呢?一种方式是使用dup2函数。
+	<pre>
+		#include <unistd.h>
+		int dup2(int oldfd, int newfd);
+			返回:若成功则为非负的描述符，若出错则为-1。
+    </pre>
+    dup2函数复制描述符表表项oldfd到描述符表表项newfd,覆盖描述符表表项newfd以前的内容。如果newfd已经打开了，dup2会在复制oldfd之前关闭newfd。<br>
+    假设在调用dup2(4,1)之前，我们的状态如图10-12所示，其中描述符1(标准输出)对应于文件A(比如一个终端)，描述符4对应于文件B(比如一个磁盘文件)。A和B的引用计数都等
+	于1。图10-15显示了调用dup2 (4, 1)之后的情况。两个描述符现在都指向文件B;文件A已经被关闭了，并且它的文件表和v-node表表项也已经被删除了;文件B的引用计数已经增
+	加了。从此以后，任何写到标准输出的数据都被重定向到文件B。
+	<img src="./res/img_10_14.png" />
+	</div>
+	<h2>10.10 标准I/O</h2>
+	<div>
+	C语言定义了一组高级输人输出函数，称为标准I/O库，为程序员提供了Unix I/0的较高级别的替代。这个库(libc)提供了打开和关闭文件的函数(fopen和fclose)、读和写字节
+	的函数(fread和fwrite)、读和写字符串的函数(fgets和fputs)，以及复杂的格式化的I/O函数(scanf和printf)。<br>
+    标准I/O库将一个打开的文件模型化为一个流。对于程序员而言，一个流就是一个指向FILE类型的结构的指针。每个ANSI C程序开始时都有三个打开的流stdin,stdout和stderr，
+	分别对应于标准输人、标准输出和标准错误:<br>
+	#include <stdio.h><br>
+	extern FILE *stdin;   /*Standard input (descriptor 0)*/<br>
+	extern FILE *stdout;  /*Standard output (descriptor 1)*/<br>
+	extern FILE *stderr;  /*Standard error (descriptor 2)*/<br>
+    类型为FILE的流是对文件描述符和流缓冲区的抽象。流缓冲区的目的就是使开销较高的Linux I/O系统调用的数量尽可能得小。例如，假设我们有一个程序，它反复调用标准I/O的
+	getc函数，每次调用返回文件的下一个字符。当第一次调用getc时，库通过调用一次read函数来填充流缓冲区，然后将缓冲区中的第一个字节返回给应用程序。只要缓冲区中还有
+	未读的字节，接下来对getc的调用就能直接从流缓冲区得到服务。
+	</div>
+	<h2>10.11 小结</h2>
+	<div>
+	Linux提供了少量的基于Unix I/O模型的系统级函数.它们允许应用程序打开、关闭、读和写文件，提取文件的元数据，以及执行I/ O重定向。Linux的读和写操作会出现不足值，
+	应用程序必须能正确地预计和处理这种情况。应用程序不应直接调用Unix I/O函数，而应该使用RIO包，RIO包通过反复执行读写操作，直到传送完所有的请求数据，自动处理不
+	足值。<br>
+    Linux内核使用三个相关的数据结构来表示打开的文件。描述符表中的表项指向打开文件表中的表项，而打开文件表中的表项又指向v-node表中的表项。每个进程都有它自己单独
+	的描述符表，而所有的进程共享同一个打开文件表和v-node表。理解这些结构的一般组成就能使我们清楚地理解文件共享和I/O重定向。<br>
+    标准I/()库是基于Unix I/O实现的，并提供了一组强大的高级I/O例程。对于大多数应用程序而言，标准I/O更简单，是优于Unix I/O的选择。然而，因为对标准I/O和网络文件
+	的一些相互不兼容的限制，Unix I/O比之标准I/O更该适用于网络应用程序。
+	</div>
 	</body>
 </html>
